@@ -1,0 +1,651 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2025 Jonathan D.A. Jewell
+= QED-SSG Cookbook
+:toc: left
+:toclevels: 3
+:sectnums:
+:icons: font
+:source-highlighter: rouge
+
+== Overview
+
+This cookbook provides recipes for common tasks in qed-ssg, covering CLI commands, Justfile recipes, Mustfile requirements, and Nickel formulae.
+
+[cols="1,3"]
+|===
+|Section |Description
+
+|<<cli-commands>>
+|Command-line interface usage
+
+|<<justfile-recipes>>
+|Just task runner recipes
+
+|<<mustfile-requirements>>
+|Required checks and validations
+
+|<<nickel-formulae>>
+|Configuration and code generation
+
+|<<workflow-compositions>>
+|Combined workflow patterns
+
+|<<adapter-operations>>
+|SSG adapter management
+
+|<<security-recipes>>
+|Security audit and hardening
+
+|<<hooks-configuration>>
+|Git hooks and automation
+|===
+
+[[cli-commands]]
+== CLI Commands
+
+=== Basic Commands
+
+[[cmd-build]]
+==== Build
+
+Build the project and validate adapters.
+
+[source,bash]
+----
+just build                    # Standard build
+just build --clean           # Clean build
+----
+
+[[cmd-test]]
+==== Test
+
+Run the test suites.
+
+[source,bash]
+----
+just test                     # Unit tests
+just test-e2e                 # End-to-end tests
+just test-all                 # All tests
+just test-adapter zola        # Test specific adapter
+just test-coverage            # With coverage report
+----
+
+[[cmd-lint]]
+==== Lint
+
+Run linters on the codebase.
+
+[source,bash]
+----
+just lint                     # All linters
+just lint-js                  # JavaScript only
+just lint-scm                 # Scheme files only
+----
+
+[[cmd-dev]]
+==== Development
+
+Start development environment.
+
+[source,bash]
+----
+just dev                      # Start dev server
+just adapter zola             # REPL with specific adapter
+----
+
+=== Command Combinations
+
+[cols="2,3,2"]
+|===
+|Alias |Command |Description
+
+|`just ci`
+|`lint && test && audit && build`
+|Full CI pipeline
+
+|`just pre-commit`
+|`fmt-check && lint && test`
+|Pre-commit checks
+
+|`just validate`
+|`fmt-check && lint && test && test-e2e && audit && build && docs`
+|Full validation
+|===
+
+=== Command Permutations
+
+The following shows useful command flag combinations:
+
+[source,bash]
+----
+# Test variations
+just test                     # Basic
+just test-coverage            # With coverage
+just test-e2e                 # E2E only
+
+# Lint variations
+just lint                     # Check only
+just fmt                      # Auto-format
+just fmt-check                # Format check
+
+# Audit variations
+just audit                    # Security audit
+just sast                     # CodeQL SAST
+just dependency-check         # Dependency audit
+----
+
+[[justfile-recipes]]
+== Justfile Recipes
+
+=== Development Recipes
+
+[[recipe-setup]]
+==== Setup
+
+[source,justfile]
+----
+# Set up development environment
+setup:
+    @echo "Setting up qed-ssg development environment..."
+    command -v deno >/dev/null || (echo "Install Deno" && exit 1)
+    @echo "Environment ready!"
+----
+
+[[recipe-dev]]
+==== Dev Server
+
+[source,justfile]
+----
+# Start development server with watch mode
+dev:
+    deno test --watch adapters/
+----
+
+=== Testing Recipes
+
+[[recipe-test]]
+==== Unit Tests
+
+[source,justfile]
+----
+test:
+    deno test --allow-read --allow-run adapters/
+----
+
+[[recipe-test-e2e]]
+==== E2E Tests
+
+[source,justfile]
+----
+test-e2e:
+    deno test --allow-all tests/e2e/
+----
+
+[[recipe-test-all]]
+==== All Tests
+
+[source,justfile]
+----
+test-all: test test-e2e
+    @echo "All tests passed!"
+----
+
+=== Build Recipes
+
+[[recipe-build]]
+==== Build
+
+[source,justfile]
+----
+build:
+    @echo "Building qed-ssg..."
+    deno check adapters/*.js
+    @echo "Build complete!"
+----
+
+[[recipe-clean]]
+==== Clean
+
+[source,justfile]
+----
+clean:
+    rm -rf coverage/ dist/ .deno/
+----
+
+=== Adapter Recipes
+
+[[recipe-list-adapters]]
+==== List Adapters
+
+[source,justfile]
+----
+list-adapters:
+    @ls -1 adapters/*.js | xargs -I{} basename {} .js | sort
+----
+
+[[recipe-sync-adapters]]
+==== Sync Adapters
+
+[source,justfile]
+----
+sync-adapters:
+    @echo "Syncing from poly-ssg-mcp hub..."
+    ~/Documents/scripts/transfer-ssg-adapters.sh --satellite qed-ssg
+----
+
+[[mustfile-requirements]]
+== Mustfile Requirements
+
+=== MUST Requirements
+
+These checks **must pass** before merge.
+
+[cols="2,3"]
+|===
+|Check |Command
+
+|Test
+|`deno test --allow-read --allow-run adapters/`
+
+|Lint
+|`deno lint adapters/`
+
+|Format
+|`deno fmt --check adapters/`
+
+|No Secrets
+|`! grep -rn 'password\|secret' adapters/`
+
+|SPDX Headers
+|`for f in adapters/*.js; do head -1 "$f" \| grep -q 'SPDX'; done`
+|===
+
+=== MUST-NOT Requirements
+
+These patterns **must not appear**.
+
+[cols="2,3"]
+|===
+|Anti-Pattern |Detection
+
+|`eval()` usage
+|`! grep -rn 'eval(' adapters/`
+
+|Shell string concatenation
+|`! grep -rn '\$(' adapters/ \| grep -v Deno.Command`
+
+|Hardcoded localhost
+|`! grep -rn 'http://localhost' adapters/`
+
+|Console.log in production
+|`! grep -rn 'console.log' adapters/*.js`
+|===
+
+=== SHOULD Requirements
+
+These are recommended but not blocking.
+
+[cols="2,3"]
+|===
+|Recommendation |Threshold
+
+|Code coverage
+|>= 70%
+
+|Build time
+|< 5 minutes
+
+|README exists
+|Non-empty README.adoc
+
+|CHANGELOG exists
+|CHANGELOG.md present
+|===
+
+[[nickel-formulae]]
+== Nickel Formulae
+
+=== Project Configuration (`config.ncl`)
+
+[source,nickel]
+----
+{
+  project = {
+    name = "qed-ssg",
+    version = "0.1.0",
+    license = "MIT OR AGPL-3.0-or-later",
+  },
+
+  adapters = {
+    count = 28,
+    timeout_ms = 30000,
+  },
+
+  test = {
+    coverage_threshold = 70,
+  },
+
+  security = {
+    audit_on_install = true,
+    require_spdx = true,
+  },
+}
+----
+
+=== Adapter Generation (`formulae/adapters.ncl`)
+
+Generate adapter code from templates:
+
+[source,nickel]
+----
+let mkAdapter = fun name language description binary =>
+  {
+    meta = { name, language, description },
+    runtime = { binary, timeout_ms = 30000 },
+    tools = [
+      { name = "${name}_init", ... },
+      { name = "${name}_build", ... },
+      { name = "${name}_serve", ... },
+    ],
+  }
+in
+
+{
+  zola = mkAdapter "Zola" "Rust" "Fast SSG" "zola",
+  hakyll = mkAdapter "Hakyll" "Haskell" "Haskell SSG" "stack",
+}
+----
+
+=== CLI Combinatorics (`formulae/cli.ncl`)
+
+[source,nickel]
+----
+# Command sequence combinator
+let sequence = fun cmd1 cmd2 => {
+  name = "${cmd1.name}-then-${cmd2.name}",
+  shell = "just ${cmd1.name} && just ${cmd2.name}",
+}
+
+# Parallel combinator
+let parallel = fun cmds => {
+  shell = std.string.join " & " cmds ++ " && wait",
+}
+----
+
+[[workflow-compositions]]
+== Workflow Compositions
+
+=== Development Workflow
+
+[source,bash]
+----
+# 1. Setup (once)
+just setup
+
+# 2. Development cycle
+just dev              # Start watching
+just test             # Run tests
+just lint             # Check code
+
+# 3. Before commit
+just pre-commit
+----
+
+=== Release Workflow
+
+[source,bash]
+----
+# 1. Full validation
+just validate
+
+# 2. Prepare release
+just release v1.0.0
+
+# 3. Tag and push
+git tag v1.0.0
+git push --tags
+----
+
+=== CI/CD Workflow
+
+[source,yaml]
+----
+# .github/workflows/ci.yml
+jobs:
+  test:
+    - just lint
+    - just test
+    - just test-e2e
+
+  security:
+    - just audit
+    - just sast
+
+  build:
+    - just build
+----
+
+[[adapter-operations]]
+== Adapter Operations
+
+=== Available Adapters (28)
+
+[cols="2,1,3"]
+|===
+|Adapter |Language |Description
+
+|Zola |Rust |Fast SSG with Sass
+|Cobalt |Rust |Simple SSG
+|mdBook |Rust |Book from Markdown
+|Hakyll |Haskell |Pandoc-based SSG
+|Ema |Haskell |Hot-reload SSG
+|Serum |Elixir |Simple SSG
+|Tableau |Elixir |Data-focused SSG
+|Franklin.jl |Julia |Technical blogging
+|Documenter.jl |Julia |Julia docs
+|Laika |Scala |Site/e-book generator
+|Frog |Racket |Blog generator
+|Pollen |Racket |Book publishing
+|... |... |...
+|===
+
+=== Adapter Commands
+
+Each adapter exposes these tools via MCP:
+
+[source,javascript]
+----
+// Tool pattern: {adapter}_{action}
+zola_init({ path: "mysite" })
+zola_build({ path: ".", outputDir: "public" })
+zola_serve({ port: 1111 })
+zola_check({ drafts: true })
+zola_version()
+----
+
+=== Testing Adapters
+
+[source,bash]
+----
+# List all adapters
+just list-adapters
+
+# Test specific adapter
+just test-adapter hakyll
+
+# Test all adapters
+just test-adapters
+
+# Generate adapter docs
+just docs-adapters
+----
+
+[[security-recipes]]
+== Security Recipes
+
+=== Security Audit
+
+[source,bash]
+----
+# Full security audit
+just audit
+
+# Check for eval() usage
+grep -rn 'eval(' adapters/
+
+# Check for hardcoded secrets
+grep -rn 'password\|secret\|api.key\|token' adapters/
+
+# Check command execution safety
+grep -rn 'Deno.Command' adapters/  # Should use this
+grep -rn 'exec(' adapters/          # Should NOT appear
+----
+
+=== SAST Analysis
+
+[source,bash]
+----
+# Trigger CodeQL analysis
+just sast
+
+# Or via GitHub CLI
+gh workflow run codeql.yml
+----
+
+=== Dependency Audit
+
+[source,bash]
+----
+# Check for vulnerabilities
+just dependency-check
+
+# Update dependencies
+# (handled by Dependabot)
+----
+
+=== Security Checklist
+
+* [ ] All adapters use `Deno.Command` with arrays (no shell strings)
+* [ ] No `eval()` or equivalent
+* [ ] No hardcoded secrets
+* [ ] SPDX headers on all files
+* [ ] SHA-pinned GitHub Actions
+* [ ] Dependabot configured
+
+[[hooks-configuration]]
+== Hooks Configuration
+
+=== Installing Hooks
+
+[source,bash]
+----
+just install-hooks
+----
+
+=== Pre-commit Hook
+
+[source,bash]
+----
+#!/bin/bash
+# .git/hooks/pre-commit
+just pre-commit
+----
+
+Runs:
+
+1. `just fmt-check` - Format validation
+2. `just lint` - Linting
+3. `just test` - Unit tests
+
+=== Pre-push Hook
+
+[source,bash]
+----
+#!/bin/bash
+# .git/hooks/pre-push
+just pre-push
+----
+
+Runs:
+
+1. `just test-all` - All tests
+2. `just audit` - Security audit
+
+=== Commit Message Hook
+
+Enforces conventional commits format:
+
+[source,text]
+----
+type(scope): description
+
+Types: feat, fix, docs, style, refactor, test, chore
+Max length: 72 characters
+----
+
+== Quick Reference
+
+=== Command Cheat Sheet
+
+[cols="2,3"]
+|===
+|Task |Command
+
+|Setup
+|`just setup`
+
+|Run tests
+|`just test`
+
+|Run all tests
+|`just test-all`
+
+|Lint code
+|`just lint`
+
+|Format code
+|`just fmt`
+
+|Security audit
+|`just audit`
+
+|Build
+|`just build`
+
+|Start dev server
+|`just dev`
+
+|List adapters
+|`just list-adapters`
+
+|Full CI
+|`just ci`
+
+|Pre-commit
+|`just pre-commit`
+
+|Full validation
+|`just validate`
+|===
+
+=== File Reference
+
+[cols="2,3"]
+|===
+|File |Purpose
+
+|`Justfile`
+|Task runner recipes
+
+|`Mustfile`
+|Required checks
+
+|`config.ncl`
+|Project configuration
+
+|`formulae/adapters.ncl`
+|Adapter generation
+
+|`formulae/cli.ncl`
+|CLI combinatorics
+|===
