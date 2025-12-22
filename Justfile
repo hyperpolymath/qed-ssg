@@ -41,8 +41,8 @@ test-e2e:
     @echo "Running e2e tests..."
     deno test --allow-all tests/e2e/
 
-# Run all tests (unit + e2e)
-test-all: test test-e2e
+# Run all tests (unit + integration + e2e)
+test-all: test test-integration test-e2e
     @echo "All tests passed!"
 
 # Run tests for a specific adapter
@@ -53,6 +53,20 @@ test-adapter name:
 test-coverage:
     deno test --coverage=coverage/ --allow-read --allow-run adapters/
     deno coverage coverage/
+
+# Run integration tests
+test-integration:
+    @echo "Running integration tests..."
+    deno test --allow-read --allow-run tests/integration/
+
+# Run benchmarks
+benchmark:
+    @echo "Running performance benchmarks..."
+    deno test --allow-read --allow-run tests/benchmark/
+
+# Run full test suite with coverage report
+test-full: test test-integration test-e2e
+    @echo "Full test suite passed!"
 
 # ============================================================================
 # LINTING & FORMATTING
@@ -205,3 +219,56 @@ pre-commit: fmt-check lint test
 # Pre-push hook
 pre-push: test-all audit
     @echo "Pre-push checks passed!"
+
+# ============================================================================
+# CONTAINER
+# ============================================================================
+
+# Build container image
+container-build:
+    podman build -t qed-ssg:latest -f Containerfile --target production .
+
+# Build development container
+container-dev:
+    podman build -t qed-ssg:dev -f Containerfile --target development .
+
+# Run container
+container-run:
+    podman run --rm -it qed-ssg:latest
+
+# Run tests in container
+container-test:
+    podman build -t qed-ssg:test -f Containerfile --target test .
+    podman run --rm qed-ssg:test
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+
+# Show project statistics
+stats:
+    @echo "=== QED-SSG Statistics ==="
+    @echo "Adapters: $(ls -1 adapters/*.js | wc -l)"
+    @echo "Tests: $(find tests -name '*.ts' | wc -l)"
+    @echo "SCM files: $(ls -1 *.scm | wc -l)"
+    @echo "Total lines: $(find . -name '*.js' -o -name '*.ts' -o -name '*.scm' | xargs wc -l | tail -1)"
+
+# Verify all SPDX headers
+verify-spdx:
+    @echo "Verifying SPDX headers..."
+    @failed=0; \
+    for f in adapters/*.js hooks/* tests/**/*.ts; do \
+        if [ -f "$$f" ]; then \
+            if ! head -3 "$$f" | grep -q 'SPDX-License-Identifier'; then \
+                echo "Missing SPDX: $$f"; \
+                failed=1; \
+            fi; \
+        fi; \
+    done; \
+    [ $$failed -eq 0 ] && echo "All SPDX headers present!"
+
+# Generate coverage badge
+coverage-badge:
+    @deno test --coverage=coverage/ --allow-read --allow-run adapters/ 2>/dev/null
+    @coverage=$$(deno coverage coverage/ 2>/dev/null | grep -oP '\d+\.\d+%' | head -1 || echo "0%"); \
+    echo "Coverage: $$coverage"
