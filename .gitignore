@@ -39,7 +39,15 @@ erl_crash.dump
 
 # ReScript
 /lib/bs/
+/lib/es6/
+/lib/js/
 /.bsb.lock
+.merlin
+*.res.js.map
+
+# Deno
+/.deno/
+deno.lock
 
 # Python (SaltStack only)
 __pycache__/

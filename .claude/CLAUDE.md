@@ -54,6 +54,18 @@ Both are FOSS with independent governance (no Big Tech).
 4. **No Go code** - Use Rust instead
 5. **Python only for SaltStack** - All other Python must be rewritten
 6. **No Kotlin/Swift for mobile** - Use Tauri 2.0+ or Dioxus
+7. **No Makefile** - Use Justfile with mustfile.ncl contracts
+
+### Must-Spec Enforcement
+
+This project uses the **hyperpolymath/mustfile** pattern for contract-driven development:
+
+- **mustfile.ncl** - Nickel contract definitions for language policy, security, tests
+- **Justfile** - Task automation that enforces mustfile contracts
+- **`just enforce-policy`** - Validates no banned languages/tools are present
+- **`just pre-commit`** - Runs policy enforcement before every commit
+
+The CI workflow also enforces these policies automatically.
 
 ### Package Management
 
